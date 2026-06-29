@@ -31,6 +31,7 @@ try:
 except ImportError:
     pass
 
+import json
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -40,6 +41,7 @@ from ..adapters.database import DatabaseAdapter
 from ..adapters.transaction import TransactionAdapter
 from ..adapters.auth import AuthAdapter
 from ..adapters.blockchain import BlockchainAdapter
+from ..explain import GeminiClient
 from ..sim.simulator import ATTACK_BURST_DEFAULT, ATTACK_KINDS
 from .service import SentinelService
 from .wallet_analyzer import fetch_wallet_transactions, normalize_etherscan_tx
@@ -61,6 +63,11 @@ class InjectBody(BaseModel):
     kind: str
     entity_id: str
     burst: int = Field(default=ATTACK_BURST_DEFAULT, ge=1, le=500)
+
+
+class ChatBody(BaseModel):
+    prompt_type: str
+    threats: list
 
 
 def create_app(
@@ -111,6 +118,61 @@ def create_app(
             "firebase": service.firebase_enabled,
             "gemini": use_gemini,
         }
+
+    @app.post("/api/chat")
+    async def chat(body: ChatBody):
+        gemini_client = GeminiClient(api_key=os.environ.get("GEMINI_API_KEY"))
+        if not gemini_client.available:
+            return {"response": "Error: Gemini API Client is not configured on the backend. Please check your GEMINI_API_KEY in the .env file."}
+
+        system_instruction = (
+            "You are a senior SecOps AI analyst at CipherWatch. "
+            "Analyze the provided security anomalies list and answer the selected question "
+            "in a professional, concise security operations center style. "
+            "Use clean Markdown formatting. Focus only on the provided facts."
+        )
+
+        threats_context = json.dumps(body.threats, indent=2)
+
+        if body.prompt_type == "latest":
+            user_prompt = (
+                f"Here are the recent anomalies:\n{threats_context}\n\n"
+                "Please identify and analyze the absolute newest anomaly log in the system (the one with the latest timestamp). "
+                "Explain what triggered it, its source, risk score, and provide immediate remediation steps."
+            )
+        elif body.prompt_type == "critical":
+            user_prompt = (
+                f"Here are the recent anomalies:\n{threats_context}\n\n"
+                "Identify the anomaly with the highest risk score, explain why it is classified as critical, "
+                "and detail its impact and potential danger."
+            )
+        elif body.prompt_type == "ignore":
+            user_prompt = (
+                f"Here are the recent anomalies:\n{threats_context}\n\n"
+                "List which anomalies have low risk scores (< 40) or benign behaviors and can be ignored or deprioritized by security analysts."
+            )
+        elif body.prompt_type == "summary":
+            user_prompt = (
+                f"Here are the recent anomalies:\n{threats_context}\n\n"
+                "Provide a high-level summary of all anomalies in this batch. Group them by category (UPI, DB, Blockchain, Auth) and outline where they occurred."
+            )
+        else:
+            raise HTTPException(status_code=400, detail="Invalid prompt type")
+
+        try:
+            resp = gemini_client._client.chat.completions.create(
+                model=gemini_client._model,
+                messages=[
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=300,
+                temperature=0.3,
+            )
+            response_text = (resp.choices[0].message.content or "").strip()
+            return {"response": response_text}
+        except Exception as e:
+            return {"response": f"Gemini API Error: {str(e)}"}
 
     # ── entity / metadata ──────────────────────────────────────────────────────
 

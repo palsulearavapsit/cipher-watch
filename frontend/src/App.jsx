@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Auth from "./pages/Auth.jsx";
 import LockdownOverlay from "./components/LockdownOverlay.jsx";
+import CopilotChat from "./components/CopilotChat.jsx";
 import TopBar from "./components/TopBar.jsx";
 import ThreatHero from "./components/ThreatHero.jsx";
 import SpikeChart from "./components/SpikeChart.jsx";
@@ -111,6 +112,7 @@ function Layout({ s }) {
   return (
     <div className="flex h-full flex-col">
       {isLocked && <LockdownOverlay />}
+      <CopilotChat />
       <TopBar connected={s.connected} underThreat={underThreat} counts={s.counts} onPanic={triggerLockdown} />
       <div className="flex min-h-0 flex-1">
         <Sidebar />
