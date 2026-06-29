@@ -1,0 +1,24 @@
+Date,Description,VPA,Payee VPA,Debit,Credit,Balance
+01/06/2026,Zomato Food Order,priya.v@paytm,merchant.zomato@hdfcbank,250,0,45750
+02/06/2026,Amazon Pay Purchase,priya.v@paytm,amazon.pay@apl,1200,0,44550
+03/06/2026,Swiggy Order,priya.v@paytm,swiggy@icici,380,0,44170
+04/06/2026,Metro Recharge,priya.v@paytm,metro@upi,500,0,43670
+05/06/2026,Electricity Bill,priya.v@paytm,bescom@ybl,1800,0,41870
+06/06/2026,Zomato Food Order,priya.v@paytm,merchant.zomato@hdfcbank,320,0,41550
+07/06/2026,Netflix Subscription,priya.v@paytm,netflix@axisbank,649,0,40901
+08/06/2026,Petrol Station,priya.v@paytm,hpcl.petrol@ybl,2000,0,38901
+09/06/2026,Grocery Store,priya.v@paytm,dmart@icici,1500,0,37401
+10/06/2026,Amazon Pay Purchase,priya.v@paytm,amazon.pay@apl,899,0,36502
+11/06/2026,Coffee Shop,priya.v@paytm,cafecoffeeday@paytm,180,0,36322
+12/06/2026,Zomato Food Order,priya.v@paytm,merchant.zomato@hdfcbank,290,0,36032
+13/06/2026,Bus Pass Recharge,priya.v@paytm,bmtc@upi,200,0,35832
+14/06/2026,Pharmacy,priya.v@paytm,apollopharmacy@ybl,450,0,35382
+15/06/2026,Gym Membership,priya.v@paytm,cultfit@razorpay,1500,0,33882
+16/06/2026,Swiggy Order,priya.v@paytm,swiggy@icici,420,0,33462
+17/06/2026,Mobile Recharge,priya.v@paytm,airtel@airtel,299,0,33163
+18/06/2026,Book Store,priya.v@paytm,flipkart@ybl,650,0,32513
+19/06/2026,Amazon Pay Purchase,priya.v@paytm,amazon.pay@apl,2200,0,30313
+20/06/2026,Zomato Food Order,priya.v@paytm,merchant.zomato@hdfcbank,310,0,30003
+21/06/2026,URGENT Money Transfer,priya.v@paytm,unknown.payee@paytm,87500,0,0
+22/06/2026,Transfer Out,priya.v@paytm,unknown.payee@paytm,65000,0,0
+23/06/2026,Payment Sent,priya.v@paytm,unknown.payee@paytm,92000,0,0

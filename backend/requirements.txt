@@ -1,0 +1,18 @@
+# Core + engine + API
+pytest>=8.0
+numpy>=1.26
+scikit-learn>=1.4
+fastapi>=0.110
+uvicorn[standard]>=0.29
+httpx>=0.27
+python-dotenv>=1.0
+websockets>=12.0
+
+# Explanation layer — Gemini
+google-generativeai>=0.8
+
+# Firebase sink — writes verdicts to Firestore (Pranav's dashboard reads them)
+firebase-admin>=6.5
+
+# UPI webhook signature verification
+cryptography>=42.0
