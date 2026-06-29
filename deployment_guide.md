@@ -24,7 +24,7 @@ Render is an ideal, developer-friendly hosting service for the FastAPI Python se
 Since your backend connects to Firestore, it requires the secret service account JSON file. Render lets you inject files securely via **Secret Files**:
 1.  Go to the **Environment** tab of your service settings on Render.
 2.  Under **Secret Files**, click **Add Secret File**.
-3.  Name the file: `/secrets/firebase-sa.json`
+3.  Name the file: `firebase-sa.json`
 4.  Paste the complete contents of your `sentinel-firebase-sa.json` credential file inside it and save.
 
 ### Step 3: Configure Environment Variables
@@ -33,7 +33,7 @@ In the same **Environment** tab, click **Add Environment Variable** to add the f
 | Environment Variable | Recommended Value / Source |
 | :--- | :--- |
 | `PYTHONUTF8` | `1` |
-| `FIREBASE_CREDENTIALS_PATH` | `/secrets/firebase-sa.json` *(Points to Render's secret file)* |
+| `FIREBASE_CREDENTIALS_PATH` | `/etc/secrets/firebase-sa.json` *(Render mounts all secret files under /etc/secrets/)* |
 | `ENABLE_GEMINI` | `true` |
 | `GEMINI_API_KEY` | `sk-live-d8f9...` |
 | `ENABLE_BLOCKCHAIN` | `true` |
