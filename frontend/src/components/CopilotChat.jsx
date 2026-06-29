@@ -8,6 +8,8 @@ const PROMPT_META = [
   { id: "summary", label: "› Summarize Incidents", desc: "Compile a high-level SecOps summary of all anomalies." }
 ];
 
+const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
+
 export default function CopilotChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
@@ -36,7 +38,7 @@ export default function CopilotChat() {
     setIsTyping(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/chat", {
+      const response = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
