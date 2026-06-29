@@ -1,4 +1,4 @@
-export default function TopBar({ connected, underThreat, counts }) {
+export default function TopBar({ connected, underThreat, counts, onPanic }) {
   return (
     <header className="flex items-center justify-between gap-4 border-b border-line bg-surface/60 px-6 py-3 backdrop-blur">
       <div className="flex items-center gap-3">
@@ -18,6 +18,15 @@ export default function TopBar({ connected, underThreat, counts }) {
       </div>
 
       <div className="flex items-center gap-5">
+        {onPanic && (
+          <button
+            onClick={onPanic}
+            className="px-2.5 py-1 rounded bg-threat/10 border border-threat/30 text-[10px] uppercase tracking-widest text-threat hover:bg-threat/25 hover:border-threat cursor-pointer transition mr-1 font-semibold"
+            title="Manual System Panic Lockdown Trigger"
+          >
+            🚨 Panic
+          </button>
+        )}
         <Stat label="Events" value={counts.events} />
         <Stat label="Alerts" value={counts.alerts} tone="threat" />
         <StatusPill underThreat={underThreat} />

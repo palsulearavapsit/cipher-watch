@@ -1,4 +1,5 @@
 import { SOURCE_META } from "../lib/api.js";
+import { exportPDF } from "../lib/reportExporter.js";
 
 // The differentiator: the plain-English reason, front and center. When a threat
 // is active this is the loudest thing on screen; when calm it rests.
@@ -33,17 +34,26 @@ export default function ThreatHero({ threat }) {
         <RiskGauge value={threat.risk_score} />
       </div>
 
-      <div className="mt-5 rounded-lg border border-line bg-ink/60 p-4">
-        <div className="mb-2 text-[10px] uppercase tracking-[0.25em] text-faint">
-          Why this fired
+      <div className="mt-5 rounded-lg border border-line bg-ink/60 p-4 flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div className="flex-1">
+          <div className="mb-2 text-[10px] uppercase tracking-[0.25em] text-faint">
+            Why this fired
+          </div>
+          <ul className="space-y-1.5">
+            {lines.map((l, i) => (
+              <li key={i} className="text-[15px] leading-snug text-text">
+                {l.replace(/^[•\-]\s*/, "")}
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul className="space-y-1.5">
-          {lines.map((l, i) => (
-            <li key={i} className="text-[15px] leading-snug text-text">
-              {l.replace(/^[•\-]\s*/, "")}
-            </li>
-          ))}
-        </ul>
+        <button
+          onClick={() => exportPDF(threat)}
+          className="self-end md:self-start rounded-lg border border-line bg-ink px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-calm hover:text-text hover:bg-calm/10 hover:border-calm transition cursor-pointer whitespace-nowrap"
+          title="Print official forensic report for this incident"
+        >
+          📄 Export Report
+        </button>
       </div>
     </section>
   );

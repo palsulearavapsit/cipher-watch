@@ -17,6 +17,19 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isLocked, setIsLocked] = useState(false);
+
+  const triggerLockdown = () => {
+    setIsLocked(true);
+  };
+
+  const unlockSystem = (passphrase) => {
+    if (passphrase === "cipherlock2026") {
+      setIsLocked(false);
+      return true;
+    }
+    return false;
+  };
 
   useEffect(() => {
     // 1. Check local storage first (for local fallback / remember me session)
@@ -174,6 +187,9 @@ export function AuthProvider({ children }) {
         logout,
         resetPassword,
         loginDemo,
+        isLocked,
+        triggerLockdown,
+        unlockSystem,
       }}
     >
       {children}

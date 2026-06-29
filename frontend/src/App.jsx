@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, NavLink, useLocation } from "react-router-dom";
 import { useSentinel } from "./hooks/useSentinel.js";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Auth from "./pages/Auth.jsx";
+import LockdownOverlay from "./components/LockdownOverlay.jsx";
 import TopBar from "./components/TopBar.jsx";
 import ThreatHero from "./components/ThreatHero.jsx";
 import SpikeChart from "./components/SpikeChart.jsx";
@@ -98,10 +100,18 @@ function Layout({ s }) {
   const loc = useLocation();
   const underThreat = Boolean(s.activeThreat);
   const isLive = loc.pathname === "/";
+  const { isLocked, triggerLockdown } = useAuth();
+
+  useEffect(() => {
+    if (s.activeThreat && s.activeThreat.risk_score >= 90) {
+      triggerLockdown();
+    }
+  }, [s.activeThreat, triggerLockdown]);
 
   return (
     <div className="flex h-full flex-col">
-      <TopBar connected={s.connected} underThreat={underThreat} counts={s.counts} />
+      {isLocked && <LockdownOverlay />}
+      <TopBar connected={s.connected} underThreat={underThreat} counts={s.counts} onPanic={triggerLockdown} />
       <div className="flex min-h-0 flex-1">
         <Sidebar />
         <div className="flex min-h-0 flex-1 flex-col overflow-auto">
