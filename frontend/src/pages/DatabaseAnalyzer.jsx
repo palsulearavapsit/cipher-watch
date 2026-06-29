@@ -1,15 +1,34 @@
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const API = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 const RISK_COLOR = (s) => s >= 80 ? "#ef4444" : s >= 50 ? "#f59e0b" : "#22c55e";
 const RISK_LABEL = (s) => s >= 80 ? "HIGH RISK — EXFILTRATION" : s >= 50 ? "MEDIUM RISK — UNUSUAL" : "LOW RISK — NORMAL";
 
 export default function DatabaseAnalyzer() {
+  const { user } = useAuth();
   const [form, setForm] = useState({ user_id: "", write_count: "0", delete_count: "0", table: "users" });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const loadDemoData = () => {
+    setForm({
+      user_id: "svc_billing",
+      table: "payments",
+      write_count: "450",
+      delete_count: "200",
+    });
+    setResult(null);
+    setError(null);
+  };
+
+  const clearForm = () => {
+    setForm({ user_id: "", write_count: "0", delete_count: "0", table: "users" });
+    setResult(null);
+    setError(null);
+  };
 
   const analyze = async () => {
     if (!form.user_id) { setError("User ID is required."); return; }
@@ -33,11 +52,21 @@ export default function DatabaseAnalyzer() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 p-6 max-w-2xl">
-      <header>
-        <h2 className="text-xl font-bold tracking-tight text-text">Database Activity Analyzer</h2>
-        <p className="mt-1 text-[12px] text-faint">
-          Enter a user's database activity — detect exfiltration, mass deletes, or abnormal write patterns.
-        </p>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-text">Database Activity Analyzer</h2>
+          <p className="mt-1 text-[12px] text-faint">
+            Enter a user's database activity — detect exfiltration, mass deletes, or abnormal write patterns.
+          </p>
+        </div>
+        {user?.isDemo && (
+          <button
+            onClick={loadDemoData}
+            className="self-start md:self-center px-4 py-2 rounded-lg bg-calm/10 border border-calm/30 text-[12px] font-semibold text-calm hover:bg-calm/20 hover:border-calm hover:shadow-[0_0_12px_rgba(128,255,255,0.15)] transition-all cursor-pointer whitespace-nowrap"
+          >
+            ⚡ Load Demo Data
+          </button>
+        )}
       </header>
 
       <div className="rounded-xl border border-line bg-surface p-5 space-y-4">
@@ -50,13 +79,24 @@ export default function DatabaseAnalyzer() {
 
         {error && <p className="text-[12px] text-red-400">{error}</p>}
 
-        <button
-          onClick={analyze}
-          disabled={loading}
-          className="w-full rounded-lg bg-calm/10 border border-calm/30 py-3 text-[13px] font-semibold text-calm hover:bg-calm/20 disabled:opacity-50 transition"
-        >
-          {loading ? "Analyzing…" : "Analyze Activity →"}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={analyze}
+            disabled={loading}
+            className="flex-1 rounded-lg bg-calm/10 border border-calm/30 py-3 text-[13px] font-semibold text-calm hover:bg-calm/20 disabled:opacity-50 transition cursor-pointer"
+          >
+            {loading ? "Analyzing…" : "Analyze Activity →"}
+          </button>
+          {(form.user_id || form.table !== "users" || form.write_count !== "0" || form.delete_count !== "0" || result) && (
+            <button
+              type="button"
+              onClick={clearForm}
+              className="px-5 py-3 rounded-lg border border-line bg-ink text-[13px] font-semibold text-muted hover:text-text hover:bg-surface-2 transition cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       {result && <ResultCard result={result} />}

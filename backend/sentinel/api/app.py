@@ -20,7 +20,14 @@ from pathlib import Path
 # Load .env automatically so keys are available without shell exports
 try:
     from dotenv import load_dotenv
-    load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
+    root_env = Path(__file__).resolve().parents[3] / ".env"
+    backend_env = Path(__file__).resolve().parents[2] / ".env"
+    if root_env.exists():
+        load_dotenv(root_env, override=False)
+    elif backend_env.exists():
+        load_dotenv(backend_env, override=False)
+    else:
+        load_dotenv()
 except ImportError:
     pass
 

@@ -1,5 +1,8 @@
 import { BrowserRouter, Routes, Route, NavLink, useLocation } from "react-router-dom";
 import { useSentinel } from "./hooks/useSentinel.js";
+import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import Auth from "./pages/Auth.jsx";
 import TopBar from "./components/TopBar.jsx";
 import ThreatHero from "./components/ThreatHero.jsx";
 import SpikeChart from "./components/SpikeChart.jsx";
@@ -19,6 +22,7 @@ const NAV = [
 ];
 
 function Sidebar() {
+  const { logout, user } = useAuth();
   return (
     <nav className="flex flex-col gap-1 border-r border-line bg-surface/60 px-3 py-4 w-44 shrink-0">
       <div className="mb-4 px-2 text-[9px] uppercase tracking-[0.3em] text-faint">Navigation</div>
@@ -54,6 +58,19 @@ function Sidebar() {
             <span className="text-[10px] text-faint">{s.label}</span>
           </div>
         ))}
+
+        <div className="mt-4 border-t border-line/40 pt-3">
+          <button
+            onClick={logout}
+            className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12px] font-medium text-threat/80 hover:text-threat hover:bg-threat/10 transition-colors text-left cursor-pointer"
+          >
+            <span className="text-[10px] opacity-80">⎋</span>
+            Sign Out
+          </button>
+          <div className="px-3 mt-1.5 text-[9px] text-faint truncate" title={user?.email}>
+            {user?.displayName || "Agent"}
+          </div>
+        </div>
       </div>
     </nav>
   );
@@ -105,7 +122,19 @@ export default function App() {
   const s = useSentinel();
   return (
     <BrowserRouter>
-      <Layout s={s} />
+      <AuthProvider>
+        <Routes>
+          <Route path="/auth" element={<Auth />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <Layout s={s} />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

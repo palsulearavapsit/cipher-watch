@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const API = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 const RISK_COLOR = (s) => s >= 80 ? "#ef4444" : s >= 50 ? "#f59e0b" : "#22c55e";
@@ -21,10 +22,23 @@ function fmtTime(ts) {
 }
 
 export default function BlockchainMonitor() {
+  const { user } = useAuth();
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+
+  const loadDemoData = () => {
+    setAddress("0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+    setResult(null);
+    setError(null);
+  };
+
+  const clearForm = () => {
+    setAddress("");
+    setResult(null);
+    setError(null);
+  };
 
   const analyze = async () => {
     if (!address || !address.startsWith("0x")) {
@@ -49,11 +63,21 @@ export default function BlockchainMonitor() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 p-6">
-      <header>
-        <h2 className="text-xl font-bold tracking-tight text-text">Blockchain Monitor</h2>
-        <p className="mt-1 text-[12px] text-faint">
-          Enter any Ethereum wallet address — we fetch real transactions from Etherscan and score each one for anomalies.
-        </p>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-text">Blockchain Monitor</h2>
+          <p className="mt-1 text-[12px] text-faint">
+            Enter any Ethereum wallet address — we fetch real transactions from Etherscan and score each one for anomalies.
+          </p>
+        </div>
+        {user?.isDemo && (
+          <button
+            onClick={loadDemoData}
+            className="self-start md:self-center px-4 py-2 rounded-lg bg-calm/10 border border-calm/30 text-[12px] font-semibold text-calm hover:bg-calm/20 hover:border-calm hover:shadow-[0_0_12px_rgba(128,255,255,0.15)] transition-all cursor-pointer whitespace-nowrap"
+          >
+            ⚡ Load Demo Data
+          </button>
+        )}
       </header>
 
       <div className="flex gap-3">
@@ -66,10 +90,19 @@ export default function BlockchainMonitor() {
         <button
           onClick={analyze}
           disabled={loading}
-          className="rounded-lg bg-calm/10 border border-calm/30 px-5 py-2.5 text-[13px] font-semibold text-calm hover:bg-calm/20 disabled:opacity-50 transition whitespace-nowrap"
+          className="rounded-lg bg-calm/10 border border-calm/30 px-5 py-2.5 text-[13px] font-semibold text-calm hover:bg-calm/20 disabled:opacity-50 transition whitespace-nowrap cursor-pointer"
         >
           {loading ? "Fetching…" : "Analyze Wallet →"}
         </button>
+        {(address || result) && (
+          <button
+            type="button"
+            onClick={clearForm}
+            className="px-5 py-2.5 rounded-lg border border-line bg-ink text-[13px] font-semibold text-muted hover:text-text hover:bg-surface-2 transition cursor-pointer"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {error && (

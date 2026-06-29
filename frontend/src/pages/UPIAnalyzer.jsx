@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const API = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 const RISK_COLOR = (s) => s >= 80 ? "#ef4444" : s >= 50 ? "#f59e0b" : "#22c55e";
@@ -6,6 +7,7 @@ const RISK_LABEL = (s) => s >= 80 ? "HIGH RISK — FRAUDULENT" : s >= 50 ? "MEDI
 const RISK_BG = (s) => s >= 80 ? "bg-red-500/20 text-red-400 border-red-500/30" : s >= 50 ? "bg-orange-500/20 text-orange-400 border-orange-500/30" : "bg-green-500/20 text-green-400 border-green-500/30";
 
 export default function UPIAnalyzer() {
+  const { user } = useAuth();
   const [mode, setMode] = useState("single"); // "single" | "upload"
   const [form, setForm] = useState({ vpa: "", payee_vpa: "", amount_inr: "", count_in_window: "1" });
   const [result, setResult] = useState(null);
@@ -14,6 +16,26 @@ export default function UPIAnalyzer() {
   const [error, setError] = useState(null);
   const fileRef = useRef(null);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const loadDemoData = () => {
+    setMode("single");
+    setForm({
+      vpa: "priya.v@paytm",
+      payee_vpa: "unknown.payee@paytm",
+      amount_inr: "92000",
+      count_in_window: "47",
+    });
+    setResult(null);
+    setBatchResult(null);
+    setError(null);
+  };
+
+  const clearForm = () => {
+    setForm({ vpa: "", payee_vpa: "", amount_inr: "", count_in_window: "1" });
+    setResult(null);
+    setBatchResult(null);
+    setError(null);
+  };
 
   const analyzeSingle = async () => {
     if (!form.vpa || !form.amount_inr) { setError("UPI ID and Amount are required."); return; }
@@ -46,11 +68,21 @@ export default function UPIAnalyzer() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 p-6 max-w-3xl">
-      <header>
-        <h2 className="text-xl font-bold tracking-tight text-text">UPI Transaction Analyzer</h2>
-        <p className="mt-1 text-[12px] text-faint">
-          Analyze a single transaction or upload your entire bank statement CSV — CipherWatch scans all UPI transactions instantly.
-        </p>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-text">UPI Transaction Analyzer</h2>
+          <p className="mt-1 text-[12px] text-faint">
+            Analyze a single transaction or upload your entire bank statement CSV — CipherWatch scans all UPI transactions instantly.
+          </p>
+        </div>
+        {user?.isDemo && (
+          <button
+            onClick={loadDemoData}
+            className="self-start md:self-center px-4 py-2 rounded-lg bg-calm/10 border border-calm/30 text-[12px] font-semibold text-calm hover:bg-calm/20 hover:border-calm hover:shadow-[0_0_12px_rgba(128,255,255,0.15)] transition-all cursor-pointer whitespace-nowrap"
+          >
+            ⚡ Load Demo Data
+          </button>
+        )}
       </header>
 
       {/* Mode toggle */}
@@ -71,10 +103,21 @@ export default function UPIAnalyzer() {
           <Field label="Amount (₹)" placeholder="e.g. 45000" value={form.amount_inr} onChange={(v) => set("amount_inr", v)} type="number" />
           <Field label="Transactions in last hour" placeholder="e.g. 1" value={form.count_in_window} onChange={(v) => set("count_in_window", v)} type="number" />
           {error && <p className="text-[12px] text-red-400">{error}</p>}
-          <button onClick={analyzeSingle} disabled={loading}
-            className="w-full rounded-lg bg-calm/10 border border-calm/30 py-3 text-[13px] font-semibold text-calm hover:bg-calm/20 disabled:opacity-50 transition">
-            {loading ? "Analyzing…" : "Analyze Transaction →"}
-          </button>
+          <div className="flex gap-3">
+            <button onClick={analyzeSingle} disabled={loading}
+              className="flex-1 rounded-lg bg-calm/10 border border-calm/30 py-3 text-[13px] font-semibold text-calm hover:bg-calm/20 disabled:opacity-50 transition cursor-pointer">
+              {loading ? "Analyzing…" : "Analyze Transaction →"}
+            </button>
+            {(form.vpa || form.payee_vpa || form.amount_inr || form.count_in_window !== "1" || result) && (
+              <button
+                type="button"
+                onClick={clearForm}
+                className="px-5 py-3 rounded-lg border border-line bg-ink text-[13px] font-semibold text-muted hover:text-text hover:bg-surface-2 transition cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
       )}
 
