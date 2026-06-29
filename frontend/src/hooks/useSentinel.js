@@ -72,6 +72,16 @@ export function useSentinel() {
     });
   }, []);
 
+  const resolveActiveThreat = useCallback((status = "resolved") => {
+    setActiveThreat((prev) => {
+      if (!prev) return null;
+      return { ...prev, status, risk_score: 0 };
+    });
+    clearTimeout(threatTimer.current);
+    // Keep resolved state active on dashboard for 12 seconds so presenter can explain it
+    threatTimer.current = setTimeout(() => setActiveThreat(null), 12000);
+  }, []);
+
   const focusSeries = useMemo(
     () => seriesByEntity[focusEntity] ?? [],
     [seriesByEntity, focusEntity]
@@ -88,5 +98,6 @@ export function useSentinel() {
     attacks,
     counts,
     inject,
+    resolveActiveThreat,
   };
 }

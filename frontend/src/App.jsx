@@ -79,11 +79,11 @@ function Sidebar() {
   );
 }
 
-function LiveConsole({ s }) {
+function LiveConsole({ s, onResolve }) {
   return (
     <main className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[1.7fr_1fr]">
       <div className="flex min-h-0 flex-col gap-4">
-        <ThreatHero threat={s.activeThreat} />
+        <ThreatHero threat={s.activeThreat} onResolve={onResolve} />
         <SpikeChart entity={s.focusEntity} series={s.focusSeries} />
         <AttackControls
           entities={s.entities}
@@ -118,7 +118,7 @@ function Layout({ s }) {
         <Sidebar />
         <div className="flex min-h-0 flex-1 flex-col overflow-auto">
           <Routes>
-            <Route path="/" element={<LiveConsole s={s} />} />
+            <Route path="/" element={<LiveConsole s={s} onResolve={s.resolveActiveThreat} />} />
             <Route path="/upi" element={<UPIAnalyzer />} />
             <Route path="/database" element={<DatabaseAnalyzer />} />
             <Route path="/threats" element={<ThreatLogs />} />
