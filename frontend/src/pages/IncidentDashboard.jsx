@@ -358,6 +358,17 @@ function IncidentPanel({ threat, onClose, currentUser }) {
                 </div>
               )}
 
+              {/* Autonomous Response Policy Banner */}
+              {threat.remediation && (
+                <div>
+                  <div className="mb-2 text-[9px] uppercase tracking-widest text-faint">Autonomous Policy Action</div>
+                  <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 py-3 text-[12px] text-violet-400 font-mono flex items-center gap-2">
+                    <span className="animate-pulse">🛡️</span>
+                    <span>{threat.remediation}</span>
+                  </div>
+                </div>
+              )}
+
               {/* AI explanation */}
               {threat.explanation && (
                 <div>

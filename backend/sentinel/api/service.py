@@ -45,6 +45,9 @@ class SentinelService:
 
         self._firebase = FirebaseSink()
 
+        from ..engine.policy import PolicyEngine
+        self._policy = PolicyEngine(self._firebase)
+
         # Etherscan live poller — only if credentials present
         etherscan_key = os.environ.get("ETHERSCAN_API_KEY", "")
         watched_raw = os.environ.get("WATCHED_WALLETS", os.environ.get("WATCHED_WALLET", ""))
@@ -271,6 +274,10 @@ class SentinelService:
             message = {"type": "alert", "payload": payload}
             # Write to Firestore → Pranav's dashboard reads it live via onSnapshot
             self._firebase.push(verdict, explanation_text)
+            
+            # Deploy autonomous containment policy response
+            self._policy.process(verdict)
+            
             # Blockchain anomalies also go to walletActivity collection
             if verdict.source == "blockchain":
                 value_eth = next((f.value for f in verdict.tripped_features if f.name == "value_eth"), 0)
