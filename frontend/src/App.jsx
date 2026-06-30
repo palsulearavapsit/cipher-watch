@@ -15,6 +15,7 @@ import ThreatLogs from "./pages/ThreatLogs.jsx";
 import BlockchainMonitor from "./pages/BlockchainMonitor.jsx";
 import UPIAnalyzer from "./pages/UPIAnalyzer.jsx";
 import DatabaseAnalyzer from "./pages/DatabaseAnalyzer.jsx";
+import MitreMatrix from "./pages/MitreMatrix.jsx";
 
 const NAV = [
   { to: "/", label: "Live Console", icon: "⬤" },
@@ -22,6 +23,7 @@ const NAV = [
   { to: "/database", label: "DB Analyzer", icon: "⊞" },
   { to: "/threats", label: "Threat Logs", icon: "☰" },
   { to: "/blockchain", label: "Blockchain", icon: "◈" },
+  { to: "/mitre", label: "ATT\u0026CK Matrix", icon: "⊛" },
 ];
 
 function Sidebar() {
@@ -123,6 +125,7 @@ function Layout({ s }) {
             <Route path="/database" element={<DatabaseAnalyzer />} />
             <Route path="/threats" element={<ThreatLogs />} />
             <Route path="/blockchain" element={<BlockchainMonitor />} />
+            <Route path="/mitre" element={<MitreMatrix />} />
           </Routes>
         </div>
       </div>
