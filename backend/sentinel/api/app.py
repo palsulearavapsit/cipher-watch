@@ -156,8 +156,31 @@ def create_app(
                 f"Here are the recent anomalies:\n{threats_context}\n\n"
                 "Provide a high-level summary of all anomalies in this batch. Group them by category (UPI, DB, Blockchain, Auth) and outline where they occurred."
             )
+        elif body.prompt_type == "report":
+            user_prompt = (
+                f"Here are the recent anomalies:\n{threats_context}\n\n"
+                "Please generate a comprehensive, structured Security Investigation Report in clean Markdown format. "
+                "Include:\n"
+                "1. EXECUTIVE SUMMARY: High-level overview of the threat landscape and current status.\n"
+                "2. ATTACK TIMELINE: Chronological chain of events mapped to entities.\n"
+                "3. MITRE ATT&CK MATRIX ANALYSIS: Identify the tactics and techniques observed.\n"
+                "4. TECHNICAL CONTAINMENT STATUS: Which threats are active/mitigated.\n"
+                "5. RECOMMENDED IMMEDIATE & STRATEGIC REMEDIATION ACTIONS."
+            )
+        elif body.prompt_type == "forensic_incident":
+            user_prompt = (
+                f"Analyze this specific incident details:\n{threats_context}\n\n"
+                "Generate a deep Forensic Investigation Report in clean Markdown format. "
+                "Include:\n"
+                "1. INCIDENT ID & OVERVIEW\n"
+                "2. TRIP FEATURE ANALYSIS: Analyze the raw metrics and deviations against the baselines.\n"
+                "3. ROOT CAUSE & ATTACK VECTOR: Explain how it occurred.\n"
+                "4. RECOVERY & SECURING ACTIONS: Immediate technical steps to secure the system."
+            )
         else:
             raise HTTPException(status_code=400, detail="Invalid prompt type")
+
+        max_tokens = 1000 if body.prompt_type in ("report", "forensic_incident") else 300
 
         try:
             resp = gemini_client._client.chat.completions.create(
@@ -166,7 +189,7 @@ def create_app(
                     {"role": "system", "content": system_instruction},
                     {"role": "user", "content": user_prompt}
                 ],
-                max_tokens=300,
+                max_tokens=max_tokens,
                 temperature=0.3,
             )
             response_text = (resp.choices[0].message.content or "").strip()

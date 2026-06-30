@@ -5,7 +5,8 @@ const PROMPT_META = [
   { id: "latest", label: "› Latest Anomaly", desc: "Identify and investigate the newest incident logs." },
   { id: "critical", label: "› Worst Critical Threat", desc: "Extract the threat with the highest risk rating." },
   { id: "ignore", label: "› Ignore List (Low Risk)", desc: "Identify low risk false-positives under 40." },
-  { id: "summary", label: "› Summarize Incidents", desc: "Compile a high-level SecOps summary of all anomalies." }
+  { id: "summary", label: "› Summarize Incidents", desc: "Compile a high-level SecOps summary of all anomalies." },
+  { id: "report", label: "› Full Investigation Report", desc: "Generate a comprehensive Markdown security report." }
 ];
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";

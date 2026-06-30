@@ -6,6 +6,8 @@ import { resolveMitre } from "../lib/mitre.js";
 import { db } from "../firebase.js";
 import { doc, updateDoc } from "firebase/firestore";
 
+const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
+
 /* ─── constants ───────────────────────────────────────────────── */
 
 const LIFECYCLE = ["active", "investigating", "contained", "resolved"];
@@ -176,6 +178,11 @@ function IncidentPanel({ threat, onClose, currentUser }) {
   const [note, setNote]       = useState("");
   const [notes, setNotes]     = useState(threat.notes ?? []);
 
+  // AI Forensic Report state
+  const [aiReport, setAiReport] = useState("");
+  const [generatingAiReport, setGeneratingAiReport] = useState(false);
+  const [showAiReportPanel, setShowAiReportPanel] = useState(false);
+
   const lm  = LIFECYCLE_META[status] ?? LIFECYCLE_META.active;
   const src = getSource(threat.type);
   const si  = SOURCE_ICON[src] ?? SOURCE_ICON.transaction;
@@ -206,12 +213,46 @@ function IncidentPanel({ threat, onClose, currentUser }) {
     await updateThreat(threat.id, { notes: updated });
   };
 
+  const handleGenerateAIReport = async () => {
+    setGeneratingAiReport(true);
+    setShowAiReportPanel(true);
+    setAiReport("");
+    try {
+      const response = await fetch(`${API_BASE}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt_type: "forensic_incident",
+          threats: [{
+            id: threat.id,
+            type: threat.type,
+            score: threat.score,
+            explanation: threat.explanation,
+            timestamp: threat.timestamp,
+            status: threat.status,
+            tripped_features: threat.tripped_features ?? []
+          }]
+        })
+      });
+      const data = await response.json();
+      if (data.response) {
+        setAiReport(data.response);
+      } else {
+        setAiReport("⚠️ Failed to generate report. Make sure Gemini API is configured.");
+      }
+    } catch (e) {
+      setAiReport("⚠️ Connection error: Failed to reach security chatbot server.");
+    } finally {
+      setGeneratingAiReport(false);
+    }
+  };
+
   // Lifecycle progress bar steps
   const currentStep = LIFECYCLE.indexOf(status);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="relative flex flex-col w-full max-w-2xl max-h-[90vh] rounded-2xl border border-line bg-surface shadow-2xl overflow-hidden">
+      <div className={`relative flex flex-col w-full ${showAiReportPanel ? "max-w-5xl" : "max-w-2xl"} max-h-[90vh] rounded-2xl border border-line bg-surface shadow-2xl overflow-hidden transition-all duration-300`}>
 
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-line bg-ink/60">
@@ -231,170 +272,212 @@ function IncidentPanel({ threat, onClose, currentUser }) {
           </div>
         </div>
 
-        {/* ── Lifecycle progress bar ── */}
-        <div className="px-6 py-4 border-b border-line/50 bg-ink/30">
-          <div className="text-[9px] uppercase tracking-widest text-faint mb-3">Incident Lifecycle</div>
-          <div className="flex items-center gap-0">
-            {LIFECYCLE.map((step, i) => {
-              const sm = LIFECYCLE_META[step];
-              const isDone = i <= currentStep;
-              const isActive = i === currentStep;
-              return (
-                <div key={step} className="flex items-center flex-1">
-                  <button
-                    onClick={() => setStatus(step)}
-                    className={`flex flex-col items-center gap-1 flex-1 cursor-pointer transition-opacity ${isDone ? "opacity-100" : "opacity-40 hover:opacity-70"}`}
-                  >
-                    <div
-                      className={`h-7 w-7 rounded-full border-2 flex items-center justify-center text-[10px] font-bold transition-all ${
-                        isActive ? "scale-110 shadow-lg" : ""
-                      }`}
-                      style={{
-                        borderColor: isDone ? sm.color : "var(--color-line)",
-                        background: isDone ? `color-mix(in oklch, ${sm.color} 20%, transparent)` : "transparent",
-                        color: isDone ? sm.color : "var(--color-faint)",
-                        boxShadow: isActive ? `0 0 14px 0 color-mix(in oklch, ${sm.color} 40%, transparent)` : undefined,
-                      }}
-                    >
-                      {isDone ? (isActive ? "●" : "✓") : i + 1}
+        {/* ── Split Layout Container ── */}
+        <div className="flex flex-col md:flex-row flex-1 min-h-0 divide-y md:divide-y-0 md:divide-x divide-line">
+          
+          {/* Left Column: Details */}
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+            {/* ── Lifecycle progress bar ── */}
+            <div className="px-6 py-4 border-b border-line/50 bg-ink/30">
+              <div className="text-[9px] uppercase tracking-widest text-faint mb-3">Incident Lifecycle</div>
+              <div className="flex items-center gap-0">
+                {LIFECYCLE.map((step, i) => {
+                  const sm = LIFECYCLE_META[step];
+                  const isDone = i <= currentStep;
+                  const isActive = i === currentStep;
+                  return (
+                    <div key={step} className="flex items-center flex-1">
+                      <button
+                        onClick={() => setStatus(step)}
+                        className={`flex flex-col items-center gap-1 flex-1 cursor-pointer transition-opacity ${isDone ? "opacity-100" : "opacity-40 hover:opacity-70"}`}
+                      >
+                        <div
+                          className={`h-7 w-7 rounded-full border-2 flex items-center justify-center text-[10px] font-bold transition-all ${
+                            isActive ? "scale-110 shadow-lg" : ""
+                          }`}
+                          style={{
+                            borderColor: isDone ? sm.color : "var(--color-line)",
+                            background: isDone ? `color-mix(in oklch, ${sm.color} 20%, transparent)` : "transparent",
+                            color: isDone ? sm.color : "var(--color-faint)",
+                            boxShadow: isActive ? `0 0 14px 0 color-mix(in oklch, ${sm.color} 40%, transparent)` : undefined,
+                          }}
+                        >
+                          {isDone ? (isActive ? "●" : "✓") : i + 1}
+                        </div>
+                        <span className="text-[8px] uppercase tracking-wider" style={{ color: isDone ? sm.color : "var(--color-faint)" }}>
+                          {sm.label}
+                        </span>
+                      </button>
+                      {i < LIFECYCLE.length - 1 && (
+                        <div
+                          className="h-0.5 flex-1 mx-1 rounded transition-all"
+                          style={{ background: i < currentStep ? lm.color : "var(--color-line)" }}
+                        />
+                      )}
                     </div>
-                    <span className="text-[8px] uppercase tracking-wider" style={{ color: isDone ? sm.color : "var(--color-faint)" }}>
-                      {sm.label}
-                    </span>
-                  </button>
-                  {i < LIFECYCLE.length - 1 && (
-                    <div
-                      className="h-0.5 flex-1 mx-1 rounded transition-all"
-                      style={{ background: i < currentStep ? lm.color : "var(--color-line)" }}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
-
-          {/* Meta grid */}
-          <div className="grid grid-cols-2 gap-3 text-[11px]">
-            {[
-              ["Entity",    threat.entity_id ?? "—"],
-              ["Source",    src.toUpperCase()],
-              ["Detected",  fmt(threat.timestamp)],
-              ["Assignee",  threat.assignee ?? "Unassigned"],
-            ].map(([k, v]) => (
-              <div key={k} className="rounded-lg border border-line bg-ink/40 px-3 py-2">
-                <div className="text-[9px] uppercase tracking-widest text-faint mb-0.5">{k}</div>
-                <div className="font-medium text-text truncate">{v}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* MITRE techniques */}
-          {techniques.length > 0 && (
-            <div>
-              <div className="mb-2 text-[9px] uppercase tracking-widest text-faint">MITRE ATT&amp;CK</div>
-              <div className="flex flex-wrap gap-2">
-                {techniques.map((t) => (
-                  <a
-                    key={t.id}
-                    href={t.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex flex-col rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-violet-400 hover:bg-violet-500/20 transition"
-                  >
-                    <span className="text-[10px] font-bold font-mono">{t.id}</span>
-                    <span className="text-[9px] opacity-80">{t.name}</span>
-                  </a>
-                ))}
+                  );
+                })}
               </div>
             </div>
-          )}
 
-          {/* AI explanation */}
-          {threat.explanation && (
-            <div>
-              <div className="mb-2 text-[9px] uppercase tracking-widest text-faint">AI Forensic Analysis</div>
-              <div className="rounded-lg border border-line bg-ink/40 px-4 py-3 text-[12px] leading-relaxed text-muted whitespace-pre-wrap">
-                {threat.explanation}
-              </div>
-            </div>
-          )}
-
-          {/* Status + Assignee controls */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="mb-1 text-[9px] uppercase tracking-widest text-faint">Update Status</div>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-[12px] text-text outline-none focus:border-calm transition"
-              >
-                {LIFECYCLE.map((s) => (
-                  <option key={s} value={s}>{LIFECYCLE_META[s].label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <div className="mb-1 text-[9px] uppercase tracking-widest text-faint">Assign To</div>
-              <select
-                value={assignee}
-                onChange={(e) => setAssignee(e.target.value)}
-                className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-[12px] text-text outline-none focus:border-calm transition"
-              >
-                {ANALYSTS.map((a) => (
-                  <option key={a} value={a}>{a === "You" ? `You (${currentUser?.displayName ?? "Analyst"})` : a}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Analyst notes */}
-          <div>
-            <div className="mb-2 text-[9px] uppercase tracking-widest text-faint">Analyst Notes ({notes.length})</div>
-            {notes.length > 0 && (
-              <div className="mb-2 space-y-1.5 max-h-28 overflow-y-auto">
-                {notes.map((n, i) => (
-                  <div key={i} className="rounded-lg border border-line/50 bg-ink/40 px-3 py-2">
-                    <div className="flex justify-between text-[9px] text-faint mb-0.5">
-                      <span className="text-calm font-medium">{n.author}</span>
-                      <span>{fmtShort(n.at)}</span>
-                    </div>
-                    <div className="text-[11px] text-text">{n.text}</div>
+            {/* Scrollable details content */}
+            <div className="px-6 py-4 space-y-5">
+              {/* Meta grid */}
+              <div className="grid grid-cols-2 gap-3 text-[11px]">
+                {[
+                  ["Entity",    threat.entity_id ?? "—"],
+                  ["Source",    src.toUpperCase()],
+                  ["Detected",  fmt(threat.timestamp)],
+                  ["Assignee",  threat.assignee ?? "Unassigned"],
+                ].map(([k, v]) => (
+                  <div key={k} className="rounded-lg border border-line bg-ink/40 px-3 py-2">
+                    <div className="text-[9px] uppercase tracking-widest text-faint mb-0.5">{k}</div>
+                    <div className="font-medium text-text truncate">{v}</div>
                   </div>
                 ))}
               </div>
-            )}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddNote()}
-                placeholder="Add a note... (Enter to submit)"
-                className="flex-1 rounded-lg border border-line bg-ink px-3 py-2 text-[12px] text-text placeholder:text-faint outline-none focus:border-calm transition"
-              />
-              <button
-                onClick={handleAddNote}
-                disabled={!note.trim()}
-                className="rounded-lg border border-line bg-ink px-4 py-2 text-[11px] font-bold text-calm hover:bg-calm/10 hover:border-calm transition cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
-              >
-                Add
-              </button>
+
+              {/* MITRE techniques */}
+              {techniques.length > 0 && (
+                <div>
+                  <div className="mb-2 text-[9px] uppercase tracking-widest text-faint">MITRE ATT&amp;CK</div>
+                  <div className="flex flex-wrap gap-2">
+                    {techniques.map((t) => (
+                      <a
+                        key={t.id}
+                        href={t.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex flex-col rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-violet-400 hover:bg-violet-500/20 transition"
+                      >
+                        <span className="text-[10px] font-bold font-mono">{t.id}</span>
+                        <span className="text-[9px] opacity-80">{t.name}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* AI explanation */}
+              {threat.explanation && (
+                <div>
+                  <div className="mb-2 text-[9px] uppercase tracking-widest text-faint">AI Forensic Analysis</div>
+                  <div className="rounded-lg border border-line bg-ink/40 px-4 py-3 text-[12px] leading-relaxed text-muted whitespace-pre-wrap">
+                    {threat.explanation}
+                  </div>
+                </div>
+              )}
+
+              {/* Status + Assignee controls */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="mb-1 text-[9px] uppercase tracking-widest text-faint">Update Status</div>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-[12px] text-text outline-none focus:border-calm transition"
+                  >
+                    {LIFECYCLE.map((s) => (
+                      <option key={s} value={s}>{LIFECYCLE_META[s].label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <div className="mb-1 text-[9px] uppercase tracking-widest text-faint">Assign To</div>
+                  <select
+                    value={assignee}
+                    onChange={(e) => setAssignee(e.target.value)}
+                    className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-[12px] text-text outline-none focus:border-calm transition"
+                  >
+                    {ANALYSTS.map((a) => (
+                      <option key={a} value={a}>{a === "You" ? `You (${currentUser?.displayName ?? "Analyst"})` : a}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Analyst notes */}
+              <div>
+                <div className="mb-2 text-[9px] uppercase tracking-widest text-faint">Analyst Notes ({notes.length})</div>
+                {notes.length > 0 && (
+                  <div className="mb-2 space-y-1.5 max-h-28 overflow-y-auto">
+                    {notes.map((n, i) => (
+                      <div key={i} className="rounded-lg border border-line/50 bg-ink/40 px-3 py-2">
+                        <div className="flex justify-between text-[9px] text-faint mb-0.5">
+                          <span className="text-calm font-medium">{n.author}</span>
+                          <span>{fmtShort(n.at)}</span>
+                        </div>
+                        <div className="text-[11px] text-text">{n.text}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddNote()}
+                    placeholder="Add a note... (Enter to submit)"
+                    className="flex-1 rounded-lg border border-line bg-ink px-3 py-2 text-[12px] text-text placeholder:text-faint outline-none focus:border-calm transition"
+                  />
+                  <button
+                    onClick={handleAddNote}
+                    disabled={!note.trim()}
+                    className="rounded-lg border border-line bg-ink px-4 py-2 text-[11px] font-bold text-calm hover:bg-calm/10 hover:border-calm transition cursor-pointer disabled:opacity-40 disabled:pointer-events-none"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Right Column: AI Report Panel */}
+          {showAiReportPanel && (
+            <div className="flex-1 flex flex-col min-h-0 bg-ink/30">
+              <div className="px-6 py-4 border-b border-line flex items-center justify-between bg-ink/40">
+                <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-calm">🤖 Gemini AI Forensic Analysis</span>
+                <button
+                  onClick={() => setShowAiReportPanel(false)}
+                  className="text-[9px] uppercase tracking-widest text-faint hover:text-text cursor-pointer transition-colors"
+                >
+                  ✕ Hide
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-6 py-5">
+                {generatingAiReport ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-3 py-20 text-center">
+                    <span className="h-6 w-6 rounded-full border-2 border-calm border-t-transparent animate-spin" />
+                    <span className="text-[11px] font-mono text-faint animate-pulse">Running advanced Gemini AI forensic scan...</span>
+                  </div>
+                ) : (
+                  <div className="font-mono text-[11px] leading-relaxed text-muted whitespace-pre-wrap select-text bg-ink/40 p-4 border border-line/50 rounded-lg">
+                    {aiReport}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Footer actions ── */}
         <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-line bg-ink/60">
-          <button
-            onClick={() => exportPDF(threat)}
-            className="rounded-lg border border-line bg-ink px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-calm hover:bg-calm/10 hover:border-calm transition cursor-pointer"
-          >
-            📄 Export Report
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => exportPDF(threat)}
+              className="rounded-lg border border-line bg-ink px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-calm hover:bg-calm/10 hover:border-calm transition cursor-pointer"
+            >
+              📄 Export
+            </button>
+            <button
+              onClick={handleGenerateAIReport}
+              disabled={generatingAiReport}
+              className="rounded-lg border border-line bg-ink px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-calm hover:bg-calm/10 hover:border-calm transition cursor-pointer"
+            >
+              🤖 AI Forensic
+            </button>
+          </div>
           <div className="flex gap-2">
             <button onClick={onClose} className="rounded-lg border border-line bg-ink px-4 py-2 text-[11px] text-faint hover:text-text transition cursor-pointer">
               Cancel
@@ -424,6 +507,11 @@ export default function IncidentDashboard() {
   const [filterSrc, setFilterSrc] = useState("all");
   const [filterSev, setFilterSev] = useState("all");     // "all" | "critical" | "high" | "low"
   const [sortField, setSortField] = useState("score");
+
+  // System-wide AI report states
+  const [systemReport, setSystemReport] = useState("");
+  const [generatingSystemReport, setGeneratingSystemReport] = useState(false);
+  const [showSystemReportModal, setShowSystemReportModal] = useState(false);
 
   /* derived */
   const filtered = useMemo(() => {
@@ -463,6 +551,39 @@ export default function IncidentDashboard() {
 
   const handleSelect = (t) => setSelected((prev) => prev?.id === t.id ? null : t);
 
+  const handleGenerateSystemReport = async () => {
+    setGeneratingSystemReport(true);
+    setShowSystemReportModal(true);
+    setSystemReport("");
+    try {
+      const response = await fetch(`${API_BASE}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt_type: "report",
+          threats: threats.map(t => ({
+            id: t.id,
+            type: t.type,
+            score: t.score,
+            explanation: t.explanation,
+            timestamp: t.timestamp,
+            status: t.status
+          }))
+        })
+      });
+      const data = await response.json();
+      if (data.response) {
+        setSystemReport(data.response);
+      } else {
+        setSystemReport("⚠️ Failed to generate system report. Please verify Gemini configuration.");
+      }
+    } catch (e) {
+      setSystemReport("⚠️ Connection error: Failed to reach security chatbot server.");
+    } finally {
+      setGeneratingSystemReport(false);
+    }
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5 p-6 overflow-auto">
 
@@ -479,19 +600,28 @@ export default function IncidentDashboard() {
           </p>
         </div>
 
-        {/* View toggle */}
-        <div className="flex rounded-lg border border-line bg-ink overflow-hidden">
-          {[["kanban", "⊟ Kanban"], ["queue", "☰ Priority Queue"]].map(([v, label]) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`px-4 py-2 text-[11px] font-bold transition cursor-pointer ${
-                view === v ? "bg-calm/15 text-calm" : "text-faint hover:text-text"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        {/* View toggle & AI report */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleGenerateSystemReport}
+            className="rounded-lg border border-calm/40 bg-calm/10 hover:bg-calm/20 px-4 py-2 text-[11px] font-bold text-calm transition cursor-pointer flex items-center gap-1.5"
+          >
+            <span>🤖 AI Threat Report</span>
+          </button>
+
+          <div className="flex rounded-lg border border-line bg-ink overflow-hidden">
+            {[["kanban", "⊟ Kanban"], ["queue", "☰ Priority Queue"]].map(([v, label]) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`px-4 py-2 text-[11px] font-bold transition cursor-pointer ${
+                  view === v ? "bg-calm/15 text-calm" : "text-faint hover:text-text"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -634,6 +764,38 @@ export default function IncidentDashboard() {
           onClose={() => setSelected(null)}
           currentUser={user}
         />
+      )}
+
+      {/* ── System-wide AI Report Modal ── */}
+      {showSystemReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative flex flex-col w-full max-w-3xl h-[80vh] rounded-2xl border border-line bg-surface shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-line bg-ink/60">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-calm animate-pulse" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-calm">System AI Threat Assessment Report</span>
+              </div>
+              <button
+                onClick={() => setShowSystemReportModal(false)}
+                className="rounded-lg border border-line bg-ink px-3 py-1.5 text-[11px] text-faint hover:text-text transition cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-6 bg-ink/10 select-text">
+              {generatingSystemReport ? (
+                <div className="flex flex-col items-center justify-center h-full gap-3 py-20 text-center">
+                  <span className="h-6 w-6 rounded-full border-2 border-calm border-t-transparent animate-spin" />
+                  <span className="text-[11px] font-mono text-faint animate-pulse">Analyzing security logs and generating SecOps assessment...</span>
+                </div>
+              ) : (
+                <div className="font-mono text-[11px] leading-relaxed text-muted whitespace-pre-wrap select-text bg-ink/40 p-5 border border-line rounded-lg">
+                  {systemReport}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
