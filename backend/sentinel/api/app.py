@@ -58,6 +58,25 @@ _DEV_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 
+# Match any Vercel deployment (production + preview URLs like
+# cipher-watch-two.vercel.app or my-app-git-branch.vercel.app) so the hosted
+# dashboard can reach the API without hardcoding a single project subdomain.
+_VERCEL_ORIGIN_REGEX = r"https://[a-zA-Z0-9-]+\.vercel\.app"
+
+
+def _allowed_origins() -> list[str]:
+    """Dev origins plus any explicit production origins from ALLOWED_ORIGINS.
+
+    Set ALLOWED_ORIGINS as a comma-separated list on the backend host to allow
+    custom domains, e.g. "https://cipherwatch.com,https://app.cipherwatch.com".
+    """
+    origins = list(_DEV_ORIGINS)
+    for raw in os.environ.get("ALLOWED_ORIGINS", "").split(","):
+        origin = raw.strip()
+        if origin and origin not in origins:
+            origins.append(origin)
+    return origins
+
 
 class InjectBody(BaseModel):
     kind: str
@@ -102,7 +121,8 @@ def create_app(
     app = FastAPI(title="CipherWatch", version="1.0.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=_DEV_ORIGINS,
+        allow_origins=_allowed_origins(),
+        allow_origin_regex=_VERCEL_ORIGIN_REGEX,
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
